@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatGPT Galaxy Visualizer</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #000005;
+            overflow: hidden;
+            font-family: 'Segoe UI', sans-serif;
+            color: #e0e0e0;
+        }
+
+        #3d-graph {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* Upload UI */
+        #upload-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 5, 16, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            transition: opacity 0.5s;
+        }
+
+        .upload-box {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 40px;
+            border-radius: 20px;
+            border: 1px solid #00ffcc;
+            text-align: center;
+            box-shadow: 0 0 50px rgba(0, 255, 204, 0.1);
+            max-width: 500px;
+            width: 90%;
+        }
+
+        h1 {
+            color: #00ffcc;
+            margin-bottom: 10px;
+            font-weight: 300;
+            letter-spacing: 2px;
+        }
+
+        p {
+            color: #888;
+            margin-bottom: 30px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .custom-file-btn {
+            background: linear-gradient(45deg, #00ffcc, #00ccff);
+            border: none;
+            padding: 12px 30px;
+            border-radius: 30px;
+            color: #000;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: inline-block;
+        }
+
+        .custom-file-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.4);
+        }
+
+        #loading-text {
+            margin-top: 20px;
+            color: #00ffcc;
+            display: none;
+            font-size: 14px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 0.5;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.5;
+            }
+        }
+
+        /* UI Overlay (Graph) */
+        #info-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 320px;
+            background: rgba(0, 5, 16, 0.9);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(0, 255, 204, 0.2);
+            border-radius: 16px;
+            padding: 24px;
+            color: #e0e0e0;
+            transform: translateX(120%);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 0 40px rgba(0, 255, 204, 0.1);
+            z-index: 10;
+            display: none;
+            /* Hidden initially */
+        }
+
+        #info-panel.visible {
+            transform: translateX(0);
+        }
+
+        .meta-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        h2 {
+            margin: 0 0 8px 0;
+            color: #fff;
+            font-size: 20px;
+            font-weight: 600;
+            line-height: 1.3;
+            text-shadow: 0 0 15px rgba(0, 255, 204, 0.3);
+        }
+
+        .cluster-tag {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            border: 1px solid;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .content-box {
+            border-left: 3px solid #00ffcc;
+            padding-left: 15px;
+            margin-top: 10px;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 15px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .content-box p {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #ccc;
+            margin: 0;
+            font-style: italic;
+        }
+
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 12px;
+            pointer-events: none;
+            display: none;
+            z-index: 5;
+        }
+    </style>
+
+    <script src="https://unpkg.com/3d-force-graph"></script>
+    <script src="https://unpkg.com/three"></script>
+    <script src="https://unpkg.com/three-spritetext"></script>
+</head>
+
+<body>
+
+    <!-- Upload Overlay -->
+    <div id="upload-overlay">
+        <div class="upload-box">
+            <h1>ChatGPT Galaxy</h1>
+            <p>Upload your <code>conversations.json</code> to visualize your chat history.</p>
+
+            <div class="file-input-wrapper">
+                <label for="file-upload" class="custom-file-btn">Select File</label>
+                <input id="file-upload" type="file" accept=".json" />
+            </div>
+
+            <div id="loading-text">Analyzing conversations... This may take a minute.</div>
+        </div>
+    </div>
+
+    <div id="3d-graph"></div>
+
+    <div id="instructions">
+        Left Click: Rotate | Right Click: Pan | Scroll: Zoom | Click Node: Details
+    </div>
+
+    <div id="info-panel">
+        <div class="meta-header">
+            <span id="panel-date">Date</span>
+            <span id="panel-msgs">0 Msgs</span>
+        </div>
+        <h2 id="panel-title">Select a Node</h2>
+        <div id="panel-cluster" class="cluster-tag">Topic</div>
+        <div class="content-box">
+            <p id="panel-content">Click on any node in the galaxy to explore its contents.</p>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('file-upload');
+        const loadingText = document.getElementById('loading-text');
+        const uploadOverlay = document.getElementById('upload-overlay');
+        const instructions = document.getElementById('instructions');
+        const infoPanel = document.getElementById('info-panel');
+
+        // Color Palette
+        const colors = ['#00ffcc', '#bf00ff', '#ff0055', '#ffcc00', '#00ccff', '#ff6600', '#00ff66', '#ff00cc'];
+
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Show Loading
+            loadingText.style.display = 'block';
+            document.querySelector('.custom-file-btn').style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/process', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error || 'Upload failed');
+                }
+
+                const graphData = await response.json();
+
+                // Hide Upload UI
+                uploadOverlay.style.opacity = '0';
+                setTimeout(() => {
+                    uploadOverlay.style.display = 'none';
+                    instructions.style.display = 'block';
+                    infoPanel.style.display = 'block';
+                }, 500);
+
+                // Initialize Graph
+                initGraph(graphData);
+
+            } catch (error) {
+                alert('Error: ' + error.message);
+                loadingText.style.display = 'none';
+                document.querySelector('.custom-file-btn').style.display = 'inline-block';
+            }
+        });
+
+        function initGraph(gData) {
+            const Graph = ForceGraph3D()
+                (document.getElementById('3d-graph'))
+                .graphData(gData)
+                .backgroundColor('#000005')
+                .nodeLabel('title')
+                .nodeRelSize(6)
+                .nodeColor(node => colors[node.group % colors.length])
+                .nodeOpacity(0.9)
+                .nodeResolution(32)
+                .linkWidth(0.6)
+                .linkOpacity(0.15)
+                .linkColor(() => '#ffffff')
+                .linkDirectionalParticles(2)
+                .linkDirectionalParticleWidth(2)
+                .linkDirectionalParticleSpeed(0.005)
+                .linkDirectionalParticleColor(link => colors[link.source.group % colors.length])
+                .onNodeClick(node => {
+                    const panel = document.getElementById('info-panel');
+                    const color = colors[node.group % colors.length];
+
+                    document.getElementById('panel-title').innerText = node.title;
+
+                    const clusterTag = document.getElementById('panel-cluster');
+                    clusterTag.innerText = node.cluster_label || 'Unknown Topic';
+                    clusterTag.style.color = color;
+                    clusterTag.style.borderColor = color;
+                    clusterTag.style.background = color + '22';
+
+                    let snippet = node.snippet || 'No preview available.';
+                    snippet = snippet.replace(/^User:\s*/i, '');
+                    document.getElementById('panel-content').innerText = snippet;
+
+                    document.getElementById('panel-date').innerText = node.date || 'Unknown';
+                    document.getElementById('panel-msgs').innerText = (node.message_count || 0) + ' Msgs';
+
+                    document.querySelector('.content-box').style.borderLeftColor = color;
+
+                    panel.classList.add('visible');
+
+                    const distance = 60;
+                    const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
+                    Graph.cameraPosition(
+                        { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
+                        node,
+                        2000
+                    );
+                })
+                .onBackgroundClick(() => {
+                    document.getElementById('info-panel').classList.remove('visible');
+                });
+
+            Graph.controls().autoRotate = true;
+            Graph.controls().autoRotateSpeed = 0.6;
+        }
+    </script>
+</body>
+
+</html>

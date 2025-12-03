@@ -1,8 +1,9 @@
-openai
+flask
+gunicorn
 pandas
 numpy
 networkx
 scikit-learn
-jinja2
-python-dotenv
 sentence-transformers
+python-dotenv
+torch --extra-index-url https://download.pytorch.org/whl/cpu
