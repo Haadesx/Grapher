@@ -26,24 +26,27 @@ def extract_conversation_details(conversation: Dict) -> Dict:
     first_user_message = ""
     
     mapping = conversation.get('mapping', {})
+    if not isinstance(mapping, dict):
+        mapping = {}
     
     # Sort by creation time to get chronological order
     # We need to collect nodes first
     nodes = []
     for node_id, node_data in mapping.items():
+        if not isinstance(node_data, dict): continue
         if node_data.get('message'):
             nodes.append(node_data)
             
     # Sort by create_time if available
-    nodes.sort(key=lambda x: x.get('message', {}).get('create_time') or 0)
+    nodes.sort(key=lambda x: (x.get('message') or {}).get('create_time') or 0)
     
     for node_data in nodes:
         message = node_data.get('message')
-        if message and message.get('content'):
+        if message and isinstance(message, dict) and message.get('content'):
             content = message['content']
             role = message.get('author', {}).get('role')
             
-            if content.get('content_type') == 'text':
+            if isinstance(content, dict) and content.get('content_type') == 'text':
                 parts = content.get('parts', [])
                 text = " ".join([str(p) for p in parts if p])
                 
@@ -70,19 +73,40 @@ def process_conversations(conversations: List[Dict]) -> pd.DataFrame:
     """
     processed_data = []
     
+    # Handle case where input is a dict (e.g. wrapped in {"conversations": ...} or just a single dict)
+    if isinstance(conversations, dict):
+        if 'conversations' in conversations:
+            conversations = conversations['conversations']
+        else:
+            # If it's a dict of conversations (unlikely but possible), use values
+            conversations = list(conversations.values())
+            
+    if not isinstance(conversations, list):
+        print("Error: Input data is not a list or recognized dictionary format.")
+        return pd.DataFrame()
+    
     for conv in conversations:
+        # Safety check: ensure conv is a dictionary
+        if not isinstance(conv, dict):
+            continue
+            
         conv_id = conv.get('conversation_id') or conv.get('id')
         title = conv.get('title', 'Untitled')
-        details = extract_conversation_details(conv)
         
-        if details['text'].strip(): # Only include if there's text
-            processed_data.append({
-                'id': conv_id,
-                'title': title,
-                'text': details['text'],
-                'snippet': details['snippet'],
-                'message_count': details['message_count'],
-                'create_time': conv.get('create_time')
-            })
+        try:
+            details = extract_conversation_details(conv)
+            
+            if details['text'].strip(): # Only include if there's text
+                processed_data.append({
+                    'id': conv_id,
+                    'title': title,
+                    'text': details['text'],
+                    'snippet': details['snippet'],
+                    'message_count': details['message_count'],
+                    'create_time': conv.get('create_time')
+                })
+        except Exception as e:
+            print(f"Skipping conversation {conv_id} due to error: {e}")
+            continue
             
     return pd.DataFrame(processed_data)
