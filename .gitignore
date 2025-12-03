@@ -1,0 +1,16 @@
+# Data
+Export/
+Export.zip
+conversation.json
+conversations.json
+*.json
+
+# Environment
+.env
+venv/
+.venv/
+__pycache__/
+
+# System
+.DS_Store
+Thumbs.db
