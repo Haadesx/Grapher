@@ -1,34 +1,70 @@
-
+import os
+import requests
+import time
 from typing import List
 import pandas as pd
-from sentence_transformers import SentenceTransformer
+import numpy as np
 
-_model = None
+# Use a standard, small, efficient embedding model hosted on HuggingFace
+MODEL_ID = "sentence-transformers/all-MiniLM-L6-v2"
+HF_API_URL = f"https://api-inference.huggingface.co/pipeline/feature-extraction/{MODEL_ID}"
 
-def get_embeddings(texts: List[str], model_name="all-MiniLM-L6-v2", batch_size=32) -> List[List[float]]:
+def get_embeddings_batch(texts: List[str], token: str) -> List[List[float]]:
     """
-    Generate embeddings using a local SentenceTransformer model.
-    Free and runs locally.
+    Get embeddings from HuggingFace Inference API.
     """
-    global _model
-    if _model is None:
-        print(f"Loading local embedding model: {model_name}...")
-        _model = SentenceTransformer(model_name)
-        
-    print(f"Generating embeddings for {len(texts)} texts...")
-    embeddings = _model.encode(texts, batch_size=batch_size, show_progress_bar=True)
+    headers = {"Authorization": f"Bearer {token}"}
     
-    # Convert to list of lists
-    return embeddings.tolist()
+    # Retry logic
+    for _ in range(3):
+        try:
+            response = requests.post(HF_API_URL, headers=headers, json={"inputs": texts, "options": {"wait_for_model": True}})
+            if response.status_code == 200:
+                return response.json()
+            else:
+                print(f"API Error: {response.status_code} - {response.text}")
+                time.sleep(2)
+        except Exception as e:
+            print(f"Request failed: {e}")
+            time.sleep(2)
+            
+    return []
 
 def add_embeddings_to_df(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Adds an 'embedding' column to the DataFrame.
+    Adds an 'embedding' column to the DataFrame using HuggingFace API.
     """
-    if 'text' not in df.columns:
-        raise ValueError("DataFrame must contain a 'text' column")
+    token = os.getenv("HF_TOKEN")
+    if not token:
+        # Fallback or Error
+        print("Error: HF_TOKEN not found. Please set your HuggingFace API Token.")
+        # Return empty embeddings to prevent crash, but graph will be empty
+        df['embedding'] = [[] for _ in range(len(df))]
+        return df
+
+    print(f"Generating embeddings using HuggingFace API ({MODEL_ID})...")
+    
+    embeddings = []
+    batch_size = 20 # Small batch size for API
+    texts = df['text'].tolist()
+    
+    for i in range(0, len(texts), batch_size):
+        batch_texts = texts[i:i+batch_size]
+        # Truncate text to avoid API limits (approx 512 tokens)
+        batch_texts = [t[:1000] for t in batch_texts] 
         
-    print(f"Generating embeddings for {len(df)} conversations...")
-    embeddings = get_embeddings(df['text'].tolist())
+        batch_embeddings = get_embeddings_batch(batch_texts, token)
+        
+        # Handle API errors or malformed responses
+        if isinstance(batch_embeddings, list) and len(batch_embeddings) == len(batch_texts) and isinstance(batch_embeddings[0], list):
+             embeddings.extend(batch_embeddings)
+        else:
+            # If batch fails, fill with empty or zeros? 
+            # Better to skip or fill with zeros to keep alignment
+            print(f"Warning: Batch {i//batch_size} failed or returned invalid format.")
+            embeddings.extend([[] for _ in batch_texts])
+            
+        print(f"Processed {min(i+batch_size, len(texts))}/{len(texts)}")
+        
     df['embedding'] = embeddings
     return df
