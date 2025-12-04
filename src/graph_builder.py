@@ -41,13 +41,24 @@ def build_similarity_graph(df: pd.DataFrame, threshold=0.3, top_k=5) -> nx.Graph
     # Filter out rows with empty embeddings
     valid_df = df[df['embedding'].apply(lambda x: len(x) > 0)].copy()
     
+    # 1. Clustering & Node Addition
     if len(valid_df) < 2:
+        # Single node case - no clustering or edges needed
+        row = valid_df.iloc[0]
+        G.add_node(
+            row['id'], 
+            title=row['title'], 
+            group=0,
+            cluster_label="Single Conversation",
+            snippet=row['snippet'],
+            message_count=row['message_count'],
+            date=pd.to_datetime(row['create_time'], unit='s').strftime('%Y-%m-%d') if pd.notnull(row['create_time']) else "Unknown"
+        )
         return G
-        
-    # 1. Clustering
+
     print("   Running K-Means clustering...")
     embeddings_matrix = np.vstack(valid_df['embedding'].values)
-    n_clusters = min(8, len(valid_df) // 5) # Adaptive cluster count
+    n_clusters = max(1, min(8, len(valid_df) // 5)) # Ensure at least 1 cluster
     kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
     valid_df['cluster'] = kmeans.fit_predict(embeddings_matrix)
     
