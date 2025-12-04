@@ -263,72 +263,57 @@
 
                 if (!response.ok) {
                     const err = await response.json();
-                    throw new Error(err.error || 'Upload failed');
-                }
-
-                const graphData = await response.json();
-
-                // Hide Upload UI
-                uploadOverlay.style.opacity = '0';
-                setTimeout(() => {
-                }
-        });
-
-        function initGraph(gData) {
-            const Graph = ForceGraph3D()
-                (document.getElementById('3d-graph'))
-                .graphData(gData)
                 .backgroundColor('#000005')
-                .nodeLabel('title')
-                .nodeRelSize(6)
-                .nodeColor(node => colors[node.group % colors.length])
-                .nodeOpacity(0.9)
-                .nodeResolution(32)
-                .linkWidth(0.6)
-                .linkOpacity(0.15)
-                .linkColor(() => '#ffffff')
-                .linkDirectionalParticles(2)
-                .linkDirectionalParticleWidth(2)
-                .linkDirectionalParticleSpeed(0.005)
-                .linkDirectionalParticleColor(link => colors[link.source.group % colors.length])
-                .onNodeClick(node => {
-                    const panel = document.getElementById('info-panel');
-                    const color = colors[node.group % colors.length];
+                        .nodeLabel('title')
+                        .nodeRelSize(6)
+                        .nodeColor(node => colors[node.group % colors.length])
+                        .nodeOpacity(0.9)
+                        .nodeResolution(32)
+                        .linkWidth(0.6)
+                        .linkOpacity(0.15)
+                        .linkColor(() => '#ffffff')
+                        .linkDirectionalParticles(2)
+                        .linkDirectionalParticleWidth(2)
+                        .linkDirectionalParticleSpeed(0.005)
+                        .linkDirectionalParticleColor(link => colors[link.source.group % colors.length])
+                        .onNodeClick(node => {
+                            const panel = document.getElementById('info-panel');
+                            const color = colors[node.group % colors.length];
 
-                    document.getElementById('panel-title').innerText = node.title;
+                            document.getElementById('panel-title').innerText = node.title;
 
-                    const clusterTag = document.getElementById('panel-cluster');
-                    clusterTag.innerText = node.cluster_label || 'Unknown Topic';
-                    clusterTag.style.color = color;
-                    clusterTag.style.borderColor = color;
-                    clusterTag.style.background = color + '22';
+                            const clusterTag = document.getElementById('panel-cluster');
+                            clusterTag.innerText = node.cluster_label || 'Unknown Topic';
+                            clusterTag.style.color = color;
+                            clusterTag.style.borderColor = color;
+                            clusterTag.style.background = color + '22';
 
-                    let snippet = node.snippet || 'No preview available.';
-                    snippet = snippet.replace(/^User:\s*/i, '');
-                    document.getElementById('panel-content').innerText = snippet;
+                            let snippet = node.snippet || 'No preview available.';
+                            snippet = snippet.replace(/^User:\s*/i, '');
+                            document.getElementById('panel-content').innerText = snippet;
 
-                    document.getElementById('panel-date').innerText = node.date || 'Unknown';
-                    document.getElementById('panel-msgs').innerText = (node.message_count || 0) + ' Msgs';
+                            document.getElementById('panel-date').innerText = node.date || 'Unknown';
+                            document.getElementById('panel-msgs').innerText = (node.message_count || 0) + ' Msgs';
 
-                    document.querySelector('.content-box').style.borderLeftColor = color;
+                            document.querySelector('.content-box').style.borderLeftColor = color;
 
-                    panel.classList.add('visible');
+                            panel.classList.add('visible');
 
-                    const distance = 60;
-                    const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
-                    Graph.cameraPosition(
-                        { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
-                        node,
-                        2000
-                    );
-                })
-                .onBackgroundClick(() => {
-                    document.getElementById('info-panel').classList.remove('visible');
-                });
+                            const distance = 60;
+                            const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
+                            Graph.cameraPosition(
+                                { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
+                                node,
+                                2000
+                            );
+                        })
+                        .onBackgroundClick(() => {
+                            document.getElementById('info-panel').classList.remove('visible');
+                        });
 
-            Graph.controls().autoRotate = true;
-            Graph.controls().autoRotateSpeed = 0.6;
-        }
+                    Graph.controls().autoRotate = true;
+                    Graph.controls().autoRotateSpeed = 0.6;
+                }
     </script>
 </body>
 
