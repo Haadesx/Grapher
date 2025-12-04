@@ -36,11 +36,7 @@ def add_embeddings_to_df(df: pd.DataFrame) -> pd.DataFrame:
     """
     token = os.getenv("HF_TOKEN")
     if not token:
-        # Fallback or Error
-        print("Error: HF_TOKEN not found. Please set your HuggingFace API Token.")
-        # Return empty embeddings to prevent crash, but graph will be empty
-        df['embedding'] = [[] for _ in range(len(df))]
-        return df
+        raise ValueError("HuggingFace Token (HF_TOKEN) is missing. Please add it to your Environment Variables.")
 
     print(f"Generating embeddings using HuggingFace API ({MODEL_ID})...")
     

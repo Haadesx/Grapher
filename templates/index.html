@@ -271,19 +271,7 @@
                 // Hide Upload UI
                 uploadOverlay.style.opacity = '0';
                 setTimeout(() => {
-                    uploadOverlay.style.display = 'none';
-                    instructions.style.display = 'block';
-                    infoPanel.style.display = 'block';
-                }, 500);
-
-                // Initialize Graph
-                initGraph(graphData);
-
-            } catch (error) {
-                alert('Error: ' + error.message);
-                loadingText.style.display = 'none';
-                document.querySelector('.custom-file-btn').style.display = 'inline-block';
-            }
+                }
         });
 
         function initGraph(gData) {
