@@ -16,19 +16,22 @@ def get_embeddings_batch(texts: List[str], token: str) -> List[List[float]]:
     headers = {"Authorization": f"Bearer {token}"}
     
     # Retry logic
+    last_error = ""
     for _ in range(3):
         try:
             response = requests.post(HF_API_URL, headers=headers, json={"inputs": texts, "options": {"wait_for_model": True}})
             if response.status_code == 200:
                 return response.json()
             else:
-                print(f"API Error: {response.status_code} - {response.text}")
+                last_error = f"API Error: {response.status_code} - {response.text}"
+                print(last_error)
                 time.sleep(2)
         except Exception as e:
-            print(f"Request failed: {e}")
+            last_error = f"Request failed: {e}"
+            print(last_error)
             time.sleep(2)
             
-    return []
+    raise Exception(f"HuggingFace API failed: {last_error}")
 
 def add_embeddings_to_df(df: pd.DataFrame) -> pd.DataFrame:
     """
