@@ -55,7 +55,7 @@ def build_similarity_graph(df: pd.DataFrame, threshold=0.3, top_k=5) -> nx.Graph
             group=0,
             cluster_label="Single Conversation",
             snippet=row['snippet'],
-            message_count=row['message_count'],
+            message_count=int(row['message_count']),
             date=pd.to_datetime(row['create_time'], unit='s').strftime('%Y-%m-%d') if pd.notnull(row['create_time']) else "Unknown"
         )
         return G
@@ -80,7 +80,7 @@ def build_similarity_graph(df: pd.DataFrame, threshold=0.3, top_k=5) -> nx.Graph
             group=int(row['cluster']),
             cluster_label=cluster_name,
             snippet=row['snippet'], # Use the pre-extracted snippet
-            message_count=row['message_count'],
+            message_count=int(row['message_count']),
             date=pd.to_datetime(row['create_time'], unit='s').strftime('%Y-%m-%d') if pd.notnull(row['create_time']) else "Unknown"
         )
         
