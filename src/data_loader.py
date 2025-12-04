@@ -83,10 +83,18 @@ def extract_conversation_details(conversation: Dict) -> Dict:
                 
     full_text = "\n".join(text_parts)
     
+    # Create a preview snippet from the first few messages to give context
+    preview_lines = text_parts[:3] 
+    preview_text = "\n\n".join(preview_lines)
+    
+    # Truncate if too long
+    if len(preview_text) > 800:
+        preview_text = preview_text[:800] + "..."
+    
     return {
         'text': full_text,
         'message_count': message_count,
-        'snippet': first_user_message[:300] + "..." if len(first_user_message) > 300 else first_user_message
+        'snippet': preview_text
     }
 
 def process_conversations(conversations: List[Dict]) -> pd.DataFrame:
@@ -95,8 +103,11 @@ def process_conversations(conversations: List[Dict]) -> pd.DataFrame:
     """
     processed_data = []
     
+    print(f"DEBUG: process_conversations input type: {type(conversations)}")
+    
     # Handle case where input is a dict
     if isinstance(conversations, dict):
+        print(f"DEBUG: Input is dict with keys: {list(conversations.keys())}")
         if 'conversations' in conversations:
             conversations = conversations['conversations']
         elif 'messages' in conversations and ('conversation_id' in conversations or 'id' in conversations):
@@ -109,6 +120,8 @@ def process_conversations(conversations: List[Dict]) -> pd.DataFrame:
     if not isinstance(conversations, list):
         print("Error: Input data is not a list or recognized dictionary format.")
         return pd.DataFrame()
+        
+    print(f"DEBUG: Processing {len(conversations)} conversations...")
     
     for conv in conversations:
         # Safety check: ensure conv is a dictionary

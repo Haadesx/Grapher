@@ -1,5 +1,7 @@
 from flask import Flask, request, jsonify, render_template
 import os
+# Fix for sklearn/joblib crash on Windows Flask
+os.environ["OMP_NUM_THREADS"] = "1"
 import json
 import pandas as pd
 from dotenv import load_dotenv
@@ -31,6 +33,10 @@ def process_file():
         
     if file:
         try:
+            # Save file for debugging
+            file.save("debug_upload.json")
+            file.seek(0) # Reset cursor after saving
+            
             # Load JSON directly from stream
             raw_data = json.load(file)
             
@@ -58,7 +64,7 @@ def process_file():
             df = add_embeddings_to_df(df)
             
             # Build Graph
-            G = build_similarity_graph(df, threshold=0.3, top_k=5)
+            G = build_similarity_graph(df, threshold=0.25, top_k=8)
             
             # Convert to JSON
             graph_data = nx.node_link_data(G)
