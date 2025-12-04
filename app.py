@@ -34,7 +34,22 @@ def process_file():
             # Process Data
             df = process_conversations(raw_data)
             if df.empty:
-                return jsonify({'error': 'No valid conversations found'}), 400
+                # Generate a helpful error message
+                debug_msg = "No valid conversations found."
+                if isinstance(raw_data, list):
+                    debug_msg += f" Uploaded list with {len(raw_data)} items."
+                    if len(raw_data) > 0:
+                        first_item = raw_data[0]
+                        if isinstance(first_item, dict):
+                            debug_msg += f" First item keys: {list(first_item.keys())}."
+                        else:
+                            debug_msg += f" First item type: {type(first_item)}."
+                elif isinstance(raw_data, dict):
+                    debug_msg += f" Uploaded dict with keys: {list(raw_data.keys())}."
+                else:
+                    debug_msg += f" Uploaded data type: {type(raw_data)}."
+                    
+                return jsonify({'error': debug_msg}), 400
                 
             # Generate Embeddings (This might be slow)
             df = add_embeddings_to_df(df)
