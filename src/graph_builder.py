@@ -42,7 +42,11 @@ def build_similarity_graph(df: pd.DataFrame, threshold=0.3, top_k=5) -> nx.Graph
     valid_df = df[df['embedding'].apply(lambda x: len(x) > 0)].copy()
     
     # 1. Clustering & Node Addition
-    if len(valid_df) < 2:
+    if len(valid_df) == 0:
+        print("Warning: No valid embeddings found. Returning empty graph.")
+        return G
+        
+    if len(valid_df) == 1:
         # Single node case - no clustering or edges needed
         row = valid_df.iloc[0]
         G.add_node(
