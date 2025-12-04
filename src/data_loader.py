@@ -20,45 +20,67 @@ def load_conversations(file_path: str) -> List[Dict]:
 def extract_conversation_details(conversation: Dict) -> Dict:
     """
     Extracts text, message count, and a representative snippet.
+    Handles both 'mapping' (graph) and 'messages' (linear) formats.
     """
     text_parts = []
     message_count = 0
     first_user_message = ""
     
-    mapping = conversation.get('mapping', {})
-    if not isinstance(mapping, dict):
-        mapping = {}
+    # Determine source of messages
+    messages_list = []
     
-    # Sort by creation time to get chronological order
-    # We need to collect nodes first
-    nodes = []
-    for node_id, node_data in mapping.items():
-        if not isinstance(node_data, dict): continue
-        if node_data.get('message'):
-            nodes.append(node_data)
+    # Case 1: Linear 'messages' list (e.g. single export)
+    if 'messages' in conversation and isinstance(conversation['messages'], list):
+        messages_list = conversation['messages']
+        
+    # Case 2: Graph 'mapping' dict (e.g. bulk export)
+    elif 'mapping' in conversation and isinstance(conversation.get('mapping'), dict):
+        mapping = conversation['mapping']
+        nodes = []
+        for node_data in mapping.values():
+            if isinstance(node_data, dict) and node_data.get('message'):
+                nodes.append(node_data)
+        # Sort by create_time
+        nodes.sort(key=lambda x: (x.get('message') or {}).get('create_time') or 0)
+        # Extract message objects
+        messages_list = [n.get('message') for n in nodes if n.get('message')]
+        
+    for message in messages_list:
+        if not isinstance(message, dict): continue
+        
+        # Extract Content
+        content = message.get('content')
+        role = None
+        text = ""
+        
+        # Handle Author/Role
+        if 'author' in message and isinstance(message['author'], dict):
+            role = message['author'].get('role')
+        elif 'role' in message:
+            role = message['role']
             
-    # Sort by create_time if available
-    nodes.sort(key=lambda x: (x.get('message') or {}).get('create_time') or 0)
-    
-    for node_data in nodes:
-        message = node_data.get('message')
-        if message and isinstance(message, dict) and message.get('content'):
-            content = message['content']
-            role = message.get('author', {}).get('role')
-            
-            if isinstance(content, dict) and content.get('content_type') == 'text':
-                parts = content.get('parts', [])
+        # Handle Content extraction
+        if isinstance(content, dict):
+            # Standard format: content.parts
+            if content.get('content_type') == 'text' and 'parts' in content:
+                parts = content['parts']
                 text = " ".join([str(p) for p in parts if p])
+        elif isinstance(content, list):
+            # List of parts directly
+            text = " ".join([str(p) for p in content if p])
+        elif isinstance(content, str):
+            # Direct string
+            text = content
+            
+        if text and role:
+            message_count += 1
+            if role == 'user':
+                text_parts.append(f"User: {text}")
+                if not first_user_message:
+                    first_user_message = text
+            elif role == 'assistant':
+                text_parts.append(f"Assistant: {text}")
                 
-                if text:
-                    message_count += 1
-                    if role == 'user':
-                        text_parts.append(f"User: {text}")
-                        if not first_user_message:
-                            first_user_message = text
-                    elif role == 'assistant':
-                        text_parts.append(f"Assistant: {text}")
-                        
     full_text = "\n".join(text_parts)
     
     return {
@@ -73,10 +95,13 @@ def process_conversations(conversations: List[Dict]) -> pd.DataFrame:
     """
     processed_data = []
     
-    # Handle case where input is a dict (e.g. wrapped in {"conversations": ...} or just a single dict)
+    # Handle case where input is a dict
     if isinstance(conversations, dict):
         if 'conversations' in conversations:
             conversations = conversations['conversations']
+        elif 'messages' in conversations and ('conversation_id' in conversations or 'id' in conversations):
+            # It's a single conversation object
+            conversations = [conversations]
         else:
             # If it's a dict of conversations (unlikely but possible), use values
             conversations = list(conversations.values())
