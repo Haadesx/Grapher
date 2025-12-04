@@ -7,7 +7,7 @@ import numpy as np
 
 # Use a standard, small, efficient embedding model hosted on HuggingFace
 MODEL_ID = "sentence-transformers/all-MiniLM-L6-v2"
-HF_API_URL = f"https://router.huggingface.co/hf-inference/models/{MODEL_ID}"
+HF_API_URL = f"https://router.huggingface.co/hf-inference/models/{MODEL_ID}/pipeline/feature-extraction"
 
 def get_embeddings_batch(texts: List[str], token: str) -> List[List[float]]:
     """
