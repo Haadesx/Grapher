@@ -2,10 +2,13 @@ from flask import Flask, request, jsonify, render_template
 import os
 import json
 import pandas as pd
+from dotenv import load_dotenv
 from src.data_loader import process_conversations
 from src.embeddings import add_embeddings_to_df
 from src.graph_builder import build_similarity_graph
 import networkx as nx
+
+load_dotenv()
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
